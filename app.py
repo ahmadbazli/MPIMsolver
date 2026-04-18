@@ -24,7 +24,8 @@ def rk4_solver(eq_strings, y0, t_points):
             y_next = curr_y + (h/6) * (k1 + 2*k2 + 2*k3 + k4)
             y_res.append(y_next)
         return np.array(y_res)
-    except:
+    except Exception as e:
+        st.error(f"Ralat RK4: {e}")
         return None
 
 def picard_solvers(eq_strings, y0, t_points, num_iter, is_modified=True):
@@ -39,6 +40,7 @@ def picard_solvers(eq_strings, y0, t_points, num_iter, is_modified=True):
             
             for n in range(num_iter):
                 new_yn = []
+                # Modified vs Standard
                 ctx = {"y": yn_k if is_modified else current_y_start, "t": t_points[k-1], "np": np}
                 for i in range(num_vars):
                     f_val = eval(eq_strings[i].replace('^', '**'), {"__builtins__": None}, ctx)
@@ -48,7 +50,8 @@ def picard_solvers(eq_strings, y0, t_points, num_iter, is_modified=True):
             current_y_start = yn_k
             y_history.append(current_y_start)
         return np.array(y_history)
-    except:
+    except Exception as e:
+        st.error(f"Ralat Picard: {e}")
         return None
 
 # --- 2. UI LAYOUT ---
@@ -60,75 +63,73 @@ tab1, tab2, tab3 = st.tabs(["1️⃣ Configuration", "2️⃣ Equation Input", "
 # --- PAGE 1: CONFIGURATION ---
 with tab1:
     st.header("Sistem Konfigurasi")
-    col1, col2 = st.columns(2)
-    with col1:
-        # Gunakan key unik untuk elakkan ralat state
-        n_comp = st.number_input("Bilangan Kompartmen", 1, 10, 3, key="conf_n_comp")
-        t_max = st.number_input("Tempoh Masa (T)", 1, 100, 20, key="conf_t_max")
-    with col2:
-        k_stages = st.slider("Bilangan Sub-selang (k)", 5, 200, 50, key="conf_k")
-        n_iters = st.slider("Bilangan Iterasi Picard (n)", 1, 20, 5, key="conf_n")
-    st.info("💡 Tip: Selepas selesai konfigurasi, klik tab 'Equation Input' di atas.")
+    c_config1, c_config2 = st.columns(2)
+    with c_config1:
+        n_comp = st.number_input("Bilangan Kompartmen", 1, 10, 3, key="n_comp")
+        t_max = st.number_input("Tempoh Masa (T)", 1, 100, 20, key="t_max")
+    with c_config2:
+        k_stages = st.slider("Bilangan Sub-selang (k)", 5, 200, 50, key="k_val")
+        n_iters = st.slider("Bilangan Iterasi Picard (n)", 1, 20, 5, key="n_val")
+    st.info("💡 Selesai di sini? Klik tab **Equation Input** di atas.")
 
 # --- PAGE 2: EQUATION INPUT ---
 with tab2:
     st.header("Input Persamaan & Nilai Awal")
-    st.markdown("Gunakan `y, y...` untuk pembolehubah.")
-    
     u_eqs = []
     u_inits = []
     
-    # Pastikan n_comp diproses sebagai integer
+    # Looping untuk setiap kompartmen
     for i in range(int(n_comp)):
-        # Guna container supaya susunan lebih kemas
-        with st.container():
-            c1, c2 = st.columns()
-            with c1:
-                default_eq = "1 - y**2" if i==0 else "0"
-                eq = st.text_input(f"dy[{i}]/dt", value=default_eq, key=f"input_eq_{i}")
-            with c2:
-                default_val = -0.5 if i==0 else 0.0
-                init = st.number_input(f"y[{i}] Nilai Awal", value=default_val, key=f"input_init_{i}")
-            u_eqs.append(eq)
-            u_inits.append(init)
+        st.markdown(f"**Kompartmen {i}**")
+        # Betulkan ralat st.columns() dengan meletakkan input
+        row_cols = st.columns() 
+        with row_cols:
+            eq = st.text_input(f"dy[{i}]/dt", value="1 - y**2" if i==0 else "0", key=f"eq_in_{i}")
+        with row_cols:
+            init = st.number_input(f"y[{i}] Initial", value=-0.5 if i==0 else 0.0, key=f"init_in_{i}")
+        u_eqs.append(eq)
+        u_inits.append(init)
     
     st.divider()
-    run_btn = st.button("🔥 JALANKAN SIMULASI", use_container_width=True)
+    # Gunakan session_state untuk simpan trigger button
+    if st.button("🔥 JALANKAN SIMULASI", use_container_width=True):
+        st.session_state.run_sim = True
+        st.info("Simulasi selesai! Sila buka tab **Results & Analysis**.")
 
 # --- PAGE 3: RESULTS & ANALYSIS ---
 with tab3:
-    if run_btn:
+    if "run_sim" in st.session_state and st.session_state.run_sim:
         t_pts = np.linspace(0, t_max, k_stages + 1)
         
-        # Solving proses
+        # Solving
         res_rk4 = rk4_solver(u_eqs, u_inits, t_pts)
         res_mspi = picard_solvers(u_eqs, u_inits, t_pts, n_iters, True)
         res_spi = picard_solvers(u_eqs, u_inits, t_pts, n_iters, False)
         
-        if res_rk4 is not None and res_mspi is not None:
+        if res_rk4 is not None:
             st.header("Analisis Perbandingan Numerikal")
             fig, ax = plt.subplots(figsize=(12, 6))
-            
             for i in range(int(n_comp)):
-                ax.plot(t_pts, res_rk4[:, i], 'k-', alpha=0.3, label=f"RK4 (Benchmark) y[{i}]")
-                ax.plot(t_pts, res_spi[:, i], '--', label=f"SPI (Standard) y[{i}]")
-                ax.plot(t_pts, res_mspi[:, i], '-o', markersize=3, label=f"MSPI (Our Method) y[{i}]")
-            
+                ax.plot(t_pts, res_rk4[:, i], 'k-', alpha=0.3, label=f"RK4 (Bench) y[{i}]")
+                ax.plot(t_pts, res_spi[:, i], '--', label=f"SPI y[{i}]")
+                ax.plot(t_pts, res_mspi[:, i], '-o', markersize=3, label=f"MSPI y[{i}]")
             ax.set_xlabel("Masa (t)")
             ax.set_ylabel("Nilai y")
             ax.legend()
             st.pyplot(fig)
             
-            # Pengiraan ralat
+            # Metrics
             err_mspi = np.mean(np.abs(res_rk4 - res_mspi))
             err_spi = np.mean(np.abs(res_rk4 - res_spi))
             
-            c1, c2 = st.columns(2)
-            c1.metric("Ralat Purata MSPI", f"{err_mspi:.6f}")
-            c2.metric("Ralat Purata SPI", f"{err_spi:.6f}")
+            m_col1, m_col2 = st.columns(2)
+            m_col1.metric("Ralat Purata MSPI", f"{err_mspi:.6e}")
+            m_col2.metric("Ralat Purata SPI", f"{err_spi:.6e}")
             
-            st.success("Analisis: MSPI menunjukkan penumpuan yang lebih baik ke arah benchmark RK4.")
-        else:
-            st.error("Ralat dalam pengiraan. Sila semak format persamaan anda (Contoh: `1 - y**2`).")
+            st.markdown("### 📝 Discussion")
+            if err_mspi < err_spi:
+                st.success(f"Inovasi anda (MSPI) terbukti lebih tepat dengan ralat {err_mspi:.6e} berbanding Standard Picard ({err_spi:.6e}).")
+            else:
+                st.warning("Standard Picard menunjukkan keputusan yang hampir sama. Cuba tingkatkan bilangan 'Sub-selang (k)' untuk melihat perbezaan ketara MSPI.")
     else:
-        st.warning("Sila masukkan persamaan di tab 'Equation Input' dan klik butang 'Jalankan Simulasi'.")
+        st.warning("Sila tekan butang **JALANKAN SIMULASI** di Tab 2 dahulu.")
