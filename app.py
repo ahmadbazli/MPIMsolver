@@ -41,26 +41,36 @@ def picard_solvers(eq_strings, y0, t_points, num_iter, is_modified=True):
         return np.array(y_history)
     except: return None
 
-# --- 2. NAVIGATION STATE ---
-if 'step' not in st.session_state:
-    st.session_state.step = 0
+# --- 2. NAVIGATION & STATE MANAGEMENT ---
+# Inisialisasi state jika belum ada
+if 'active_tab' not in st.session_state:
+    st.session_state.active_tab = 0
 if 'run_sim' not in st.session_state:
     st.session_state.run_sim = False
 
-def next_step(): st.session_state.step += 1
-def prev_step(): st.session_state.step -= 1
+def set_tab(i):
+    st.session_state.active_tab = i
 
 # --- 3. UI LAYOUT ---
 st.set_page_config(page_title="ODE Solver Pro", layout="wide")
 st.title("🚀 ODE Solver: MSPI vs SPI vs RK4")
 
-# Tabs diselaraskan dengan session_state step
-tabs = st.tabs(["1️⃣ Configuration", "2️⃣ Equation Input", "3️⃣ Results & Analysis"])
+# Menggunakan radio sebagai pengawal tab yang stabil untuk navigasi butang
+tab_titles = ["1️⃣ Configuration", "2️⃣ Equation Input", "3️⃣ Results & Analysis"]
+current_tab_name = tab_titles[st.session_state.active_tab]
 
-# --- TAB 1: CONFIGURATION ---
-with tabs:
+# Paparkan "Tabs" palsu menggunakan radio horizontal supaya boleh dikawal butang Next
+st.write("---")
+st.radio("Navigation", tab_titles, index=st.session_state.active_tab, 
+         key="nav_radio", horizontal=True, on_change=lambda: st.session_state.update({"active_tab": tab_titles.index(st.session_state.nav_radio)}))
+st.write("---")
+
+# --- KANDUNGAN HALAMAN BERDASARKAN STATE ---
+
+# TAB 1: CONFIGURATION
+if st.session_state.active_tab == 0:
     st.header("Sistem Konfigurasi")
-    col_a, col_b = st.columns(2) # FIXED: Spec diletakkan
+    col_a, col_b = st.columns(2)
     with col_a:
         n_comp = st.number_input("Bilangan Kompartmen", 1, 10, 3, key="n_comp")
         t_max = st.number_input("Tempoh Masa (T)", 1, 100, 20, key="t_max")
@@ -68,35 +78,35 @@ with tabs:
         k_stages = st.slider("Bilangan Sub-selang (k)", 5, 200, 50, key="k_val")
         n_iters = st.slider("Bilangan Iterasi Picard (n)", 1, 20, 5, key="n_val")
     
-    st.write("---")
-    st.button("Next: Equation Input ➡️", on_click=next_step, use_container_width=True)
+    st.button("Next: Equation Input ➡️", on_click=set_tab, args=(1,), use_container_width=True)
 
-# --- TAB 2: EQUATION INPUT ---
-with tabs:
+# TAB 2: EQUATION INPUT
+elif st.session_state.active_tab == 1:
     st.header("Input Persamaan & Nilai Awal")
     u_eqs = []
     u_inits = []
     
     for i in range(int(st.session_state.n_comp)):
         st.subheader(f"Kompartmen y[{i}]")
-        c1, c2 = st.columns() # FIXED: Spec diletakkan
+        c1, c2 = st.columns()
         eq = c1.text_input(f"dy[{i}]/dt", value="1 - y**2" if i==0 else "0", key=f"eq{i}")
         init = c2.number_input(f"y[{i}] Initial Value", value=-0.5 if i==0 else 0.0, key=f"init{i}")
         u_eqs.append(eq)
         u_inits.append(init)
     
-    st.write("---")
+    st.session_state.u_eqs = u_eqs
+    st.session_state.u_inits = u_inits
+
     col_nav = st.columns(2)
-    col_nav.button("⬅️ Back", on_click=prev_step, use_container_width=True)
-    if col_nav.button("🔥 Run & Next Result ➡️", use_container_width=True):
+    col_nav.button("⬅️ Back", on_click=set_tab, args=(0,), use_container_width=True)
+    if col_nav.button("🔥 Run & See Results ➡️", use_container_width=True):
         st.session_state.run_sim = True
-        st.session_state.u_eqs = u_eqs
-        st.session_state.u_inits = u_inits
-        st.session_state.step = 2
+        st.session_state.active_tab = 2
         st.rerun()
 
-# --- TAB 3: RESULTS & ANALYSIS ---
-with tabs:
+# TAB 3: RESULTS & ANALYSIS
+elif st.session_state.active_tab == 2:
+    st.header("Hasil Analisis")
     if st.session_state.run_sim:
         t_pts = np.linspace(0, st.session_state.t_max, st.session_state.k_val + 1)
         res_rk4 = rk4_solver(st.session_state.u_eqs, st.session_state.u_inits, t_pts)
@@ -104,20 +114,20 @@ with tabs:
         res_spi = picard_solvers(st.session_state.u_eqs, st.session_state.u_inits, t_pts, st.session_state.n_val, False)
         
         if res_rk4 is not None:
-            fig, ax = plt.subplots(figsize=(10, 5))
+            fig, ax = plt.subplots(figsize=(10, 4))
             for i in range(len(st.session_state.u_inits)):
                 ax.plot(t_pts, res_rk4[:, i], 'k-', alpha=0.3, label=f"RK4 y[{i}]")
                 ax.plot(t_pts, res_spi[:, i], '--', label=f"SPI y[{i}]")
                 ax.plot(t_pts, res_mspi[:, i], '-o', markersize=3, label=f"MSPI y[{i}]")
-            ax.set_title("Analisis Perbandingan Numerikal")
-            ax.legend()
-            st.pyplot(fig)
+            ax.legend(); st.pyplot(fig)
             
             err_mspi = np.mean(np.abs(res_rk4 - res_mspi))
             err_spi = np.mean(np.abs(res_rk4 - res_spi))
             
-            c_err = st.columns(2) # FIXED: Spec diletakkan
-            c_err.metric("Ralat MSPI", f"{err_mspi:.6e}")
-            c_err.metric("Ralat SPI", f"{err_spi:.6e}")
+            e_col1, e_col2 = st.columns(2)
+            e_col1.metric("Ralat MSPI", f"{err_mspi:.6e}")
+            e_col2.metric("Ralat SPI", f"{err_spi:.6e}")
     else:
-        st.warning("Sila lengkapkan Tab 2 dan tekan Run dahulu.")
+        st.warning("Sila masukkan input di Tab 2 dahulu.")
+    
+    st.button("⬅️ Back to Input", on_click=set_tab, args=(1,), use_container_width=True)
