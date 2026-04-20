@@ -173,14 +173,26 @@ elif st.session_state.page == 2:
     niter = st.number_input("Number of Iterations", 1, 50, 5)
     t0 = st.number_input("Initial Time", value=0.0)
     tf = st.number_input("Final Time", value=10.0)
-    nstep = st.number_input("Number of Steps", 10, 1000, 200)
+
+    # Fixed step size
+    h = 0.01
+
+    # Auto compute number of steps
+    if tf > t0:
+        nstep = int((tf - t0) / h)
+    else:
+        nstep = 1
 
     st.session_state.ncomp = ncomp
     st.session_state.ninit = ninit
     st.session_state.niter = niter
     st.session_state.t0 = t0
     st.session_state.tf = tf
+    st.session_state.h = h
     st.session_state.nstep = nstep
+
+    st.info(f"Fixed Step Size Used: {h}")
+    st.caption(f"Auto computed number of steps: {nstep}")
 
     col1, col2 = st.columns(2)
 
@@ -191,8 +203,11 @@ elif st.session_state.page == 2:
 
     with col2:
         if st.button("Next"):
-            st.session_state.page = 3
-            st.rerun()
+            if tf <= t0:
+                st.error("Final Time must be greater than Initial Time.")
+            else:
+                st.session_state.page = 3
+                st.rerun()
 
 
 # =====================================
