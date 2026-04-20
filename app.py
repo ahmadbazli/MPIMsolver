@@ -156,7 +156,7 @@ if st.session_state.page == 1:
     Used for solving and prediction of ODE models.
     """)
 
-    if st.button("Start"):
+    if st.button("Start", key="start_btn"):
         st.session_state.page = 2
         st.rerun()
 
@@ -197,12 +197,12 @@ elif st.session_state.page == 2:
     col1, col2 = st.columns(2)
 
     with col1:
-        if st.button("Back"):
+        if st.button("Back", key="page2_back"):
             st.session_state.page = 1
             st.rerun()
 
     with col2:
-        if st.button("Next"):
+        if st.button("Next", key="page2_next"):
             if tf <= t0:
                 st.error("Final Time must be greater than Initial Time.")
             else:
@@ -227,7 +227,8 @@ elif st.session_state.page == 3:
     for i in range(st.session_state.ncomp):
         eq = st.text_input(
             f"Equation {i+1}",
-            placeholder="Example: -0.2*x1 + 0.1*x2"
+            placeholder="Example: -0.2*x1 + 0.1*x2",
+            key=f"eq_{i}"
         )
         equations.append(eq)
 
@@ -236,19 +237,20 @@ elif st.session_state.page == 3:
     for i in range(st.session_state.ninit):
         val = st.text_input(
             f"Initial Value {i+1}",
-            placeholder="Example: 10"
+            placeholder="Example: 10",
+            key=f"iv_{i}"
         )
         initials.append(val)
 
     col1, col2 = st.columns(2)
 
     with col1:
-        if st.button("Back"):
+        if st.button("Back", key="page3_back"):
             st.session_state.page = 2
             st.rerun()
 
     with col2:
-        if st.button("Run"):
+        if st.button("Run", key="page3_run"):
 
             try:
                 y0 = [float(v) for v in initials]
@@ -315,12 +317,13 @@ elif st.session_state.page == 4:
 
     comp = st.selectbox(
         "Select Compartment",
-        [f"C{i+1}" for i in range(mpim.shape[1])]
+        [f"C{i+1}" for i in range(mpim.shape[1])],
+        key="page4_compartment"
     )
 
     idx = int(comp[1:]) - 1
 
-    fig, ax = plt.subplots(figsize=(10,5))
+    fig, ax = plt.subplots(figsize=(10, 5))
 
     # PIM = dashed red line
     ax.plot(
@@ -342,14 +345,14 @@ elif st.session_state.page == 4:
         label="MPIM"
     )
 
-    # RK4 = O marker sahaja, tanpa line
+    # RK4 = bulatan O sahaja, tanpa line
     ax.plot(
         t,
         rk4[:, idx],
         color="black",
         linestyle="None",
-        marker="x",
-        markersize=2,
+        marker="o",
+        markersize=5,
         markerfacecolor="white",
         markeredgewidth=1.2,
         label="RK4"
@@ -384,16 +387,11 @@ elif st.session_state.page == 4:
     col1, col2 = st.columns(2)
 
     with col1:
-        if st.button("Back"):
+        if st.button("Back", key="page4_back"):
             st.session_state.page = 3
             st.rerun()
 
     with col2:
-        if st.button("Home"):
-            st.session_state.page = 1
-            st.rerun()
-
-    with col2:
-        if st.button("Home"):
+        if st.button("Home", key="page4_home"):
             st.session_state.page = 1
             st.rerun()
