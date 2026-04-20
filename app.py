@@ -314,45 +314,42 @@ elif st.session_state.page == 4:
     err = result["error"]
 
     comp = st.selectbox(
-    "Select Compartment",
-    [f"C{i+1}" for i in range(pim.shape[1])]
-)
+        "Select Compartment",
+        [f"C{i+1}" for i in range(mpim.shape[1])]
+    )
 
-idx = int(comp[1:]) - 1
+    idx = int(comp[1:]) - 1
 
-fig, ax = plt.subplots(figsize=(10,5))
+    fig, ax = plt.subplots(figsize=(10,5))
 
-# Plot semua method
-ax.plot(t, pim[:, idx], label="Original Picard", linestyle="--", color="red")
-ax.plot(t, mpim[:, idx], label="MPIM", color="blue")
-ax.plot(t, rk4[:, idx], label="RK4", color="green")
+    # Fokus hanya pada MPIM dan RK4
+    ax.plot(t, mpim[:, idx], label="MPIM", linewidth=2)
+    ax.plot(t, rk4[:, idx], label="RK4", linewidth=2)
 
-# Fokus range ikut MPIM dan RK4 sahaja
-y_focus = np.concatenate([mpim[:, idx], rk4[:, idx]])
-y_min = np.min(y_focus)
-y_max = np.max(y_focus)
-margin = 0.1 * (y_max - y_min + 1e-9)
+    ax.set_xlabel("Time")
+    ax.set_ylabel("Value")
+    ax.set_title(f"Graph of {comp} (MPIM vs RK4)")
+    ax.legend()
+    ax.grid(True)
 
-ax.set_ylim(y_min - margin, y_max + margin)
-
-ax.set_xlabel("Time")
-ax.set_ylabel("Value")
-ax.set_title(f"Graph of {comp}")
-ax.legend()
-ax.grid(True)
-
-st.pyplot(fig)
+    st.pyplot(fig)
 
     st.subheader("Error Table")
     st.dataframe(err)
 
     st.write("RK4 is used as benchmark solution.")
+    st.write("The main graph focuses on MPIM and RK4 for clearer visual comparison.")
 
     col1, col2 = st.columns(2)
 
     with col1:
         if st.button("Back"):
             st.session_state.page = 3
+            st.rerun()
+
+    with col2:
+        if st.button("Home"):
+            st.session_state.page = 1
             st.rerun()
 
     with col2:
