@@ -349,7 +349,7 @@ elif st.session_state.page == 4:
         color="black",
         linestyle="None",
         marker="o",
-        markersize=6,
+        markersize=2,
         markerfacecolor="white",
         markeredgewidth=1.2,
         label="RK4"
