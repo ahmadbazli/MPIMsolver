@@ -322,15 +322,56 @@ elif st.session_state.page == 4:
 
     fig, ax = plt.subplots(figsize=(10,5))
 
-    # Fokus hanya pada MPIM dan RK4
-    ax.plot(t, mpim[:, idx], label="MPIM", linewidth=2)
-    ax.plot(t, rk4[:, idx], label="RK4", linewidth=2)
+    # PIM = dashed red line
+    ax.plot(
+        t,
+        pim[:, idx],
+        color="red",
+        linestyle="--",
+        linewidth=1.8,
+        label="Original Picard (PIM)"
+    )
+
+    # MPIM = solid blue line
+    ax.plot(
+        t,
+        mpim[:, idx],
+        color="blue",
+        linestyle="-",
+        linewidth=2.0,
+        label="MPIM"
+    )
+
+    # RK4 = O marker sahaja, tanpa line
+    ax.plot(
+        t,
+        rk4[:, idx],
+        color="black",
+        linestyle="None",
+        marker="o",
+        markersize=6,
+        markerfacecolor="white",
+        markeredgewidth=1.2,
+        label="RK4"
+    )
+
+    # Zoom range ikut MPIM dan RK4 supaya lekuk nampak jelas
+    y_focus = np.concatenate([mpim[:, idx], rk4[:, idx]])
+    y_min = np.min(y_focus)
+    y_max = np.max(y_focus)
+
+    if abs(y_max - y_min) < 1e-8:
+        margin = 0.1
+    else:
+        margin = 0.1 * (y_max - y_min)
+
+    ax.set_ylim(y_min - margin, y_max + margin)
 
     ax.set_xlabel("Time")
     ax.set_ylabel("Value")
-    ax.set_title(f"Graph of {comp} (MPIM vs RK4)")
+    ax.set_title(f"{comp} vs Time")
     ax.legend()
-    ax.grid(True)
+    ax.grid(True, alpha=0.3)
 
     st.pyplot(fig)
 
@@ -338,7 +379,7 @@ elif st.session_state.page == 4:
     st.dataframe(err)
 
     st.write("RK4 is used as benchmark solution.")
-    st.write("The main graph focuses on MPIM and RK4 for clearer visual comparison.")
+    st.write("The graph is zoomed based on MPIM and RK4 so the curve behavior can be seen more clearly.")
 
     col1, col2 = st.columns(2)
 
