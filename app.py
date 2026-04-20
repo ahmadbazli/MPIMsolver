@@ -348,7 +348,7 @@ elif st.session_state.page == 4:
         rk4[:, idx],
         color="black",
         linestyle="None",
-        marker="o",
+        marker="x",
         markersize=2,
         markerfacecolor="white",
         markeredgewidth=1.2,
