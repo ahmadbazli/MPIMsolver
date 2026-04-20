@@ -314,25 +314,34 @@ elif st.session_state.page == 4:
     err = result["error"]
 
     comp = st.selectbox(
-        "Select Compartment",
-        [f"C{i+1}" for i in range(pim.shape[1])]
-    )
+    "Select Compartment",
+    [f"C{i+1}" for i in range(pim.shape[1])]
+)
 
-    idx = int(comp[1:]) - 1
+idx = int(comp[1:]) - 1
 
-    fig, ax = plt.subplots(figsize=(10,5))
+fig, ax = plt.subplots(figsize=(10,5))
 
-    ax.plot(t, pim[:, idx], label="Original Picard")
-    ax.plot(t, mpim[:, idx], label="MPIM")
-    ax.plot(t, rk4[:, idx], label="RK4")
+# Plot semua method
+ax.plot(t, pim[:, idx], label="Original Picard", linestyle="--", color="red")
+ax.plot(t, mpim[:, idx], label="MPIM", color="blue")
+ax.plot(t, rk4[:, idx], label="RK4", color="green")
 
-    ax.set_xlabel("Time")
-    ax.set_ylabel("Value")
-    ax.set_title(f"Graph of {comp}")
-    ax.legend()
-    ax.grid(True)
+# Fokus range ikut MPIM dan RK4 sahaja
+y_focus = np.concatenate([mpim[:, idx], rk4[:, idx]])
+y_min = np.min(y_focus)
+y_max = np.max(y_focus)
+margin = 0.1 * (y_max - y_min + 1e-9)
 
-    st.pyplot(fig)
+ax.set_ylim(y_min - margin, y_max + margin)
+
+ax.set_xlabel("Time")
+ax.set_ylabel("Value")
+ax.set_title(f"Graph of {comp}")
+ax.legend()
+ax.grid(True)
+
+st.pyplot(fig)
 
     st.subheader("Error Table")
     st.dataframe(err)
