@@ -371,9 +371,3 @@ elif st.session_state.page == 4:
             st.session_state.page = 1
             st.rerun()
 ''')
-
-path = "/mnt/data/app.py"
-with open(path, "w", encoding="utf-8") as f:
-    f.write(app_code)
-
-print(f"Saved to {path}")
