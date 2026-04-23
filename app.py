@@ -1,4 +1,5 @@
 import math
+import re
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -25,6 +26,37 @@ if "run_result" not in st.session_state:
 # FUNCTIONS
 # =====================================
 
+def extract_identifiers(expr):
+    if not expr:
+        return []
+    return re.findall(r"\b[a-zA-Z_][a-zA-Z0-9_]*\b", expr)
+
+
+def infer_state_variables(equations, param_names):
+    reserved = {
+        "t", "np", "math",
+        "sin", "cos", "tan", "exp", "sqrt", "log",
+        "abs", "pi", "e"
+    }
+
+    detected = []
+    seen = set()
+    param_set = {p.strip() for p in param_names if p.strip() != ""}
+
+    for eq in equations:
+        tokens = extract_identifiers(eq)
+        for token in tokens:
+            if token in reserved:
+                continue
+            if token in param_set:
+                continue
+            if token not in seen:
+                seen.add(token)
+                detected.append(token)
+
+    return detected
+
+
 def eval_equation(eq, t, vals, params, var_names):
     env = {
         "t": t,
@@ -35,10 +67,13 @@ def eval_equation(eq, t, vals, params, var_names):
         "tan": math.tan,
         "exp": math.exp,
         "sqrt": math.sqrt,
-        "log": math.log
+        "log": math.log,
+        "abs": abs,
+        "pi": math.pi,
+        "e": math.e
     }
 
-    # Compartment variables ikut nama yang user isi
+    # State variables detected from equations
     for name, value in zip(var_names, vals):
         env[name] = value
 
@@ -164,17 +199,6 @@ if st.session_state.page == 1:
     - Fourth Order Runge-Kutta Method – a well-known benchmark numerical solver widely used in science and engineering.
 
     The main purpose of this system is to help users solve, simulate, predict, and compare ODE models over time. It allows users to observe solution behaviour, evaluate accuracy between methods, and generate graphical outputs for analysis and research purposes.
-
-    This system is suitable for applications in:
-
-    - Epidemic and disease modelling
-    - Population dynamics
-    - Physics and engineering systems
-    - Finance and economic forecasting
-    - Biological and environmental models
-    - Academic learning and mathematical research
-    
-    Click Start to begin exploring your ODE prediction model using powerful iterative numerical methods.
     """)
 
     if st.button("Start", key="start_btn"):
@@ -251,24 +275,13 @@ elif st.session_state.page == 3:
 
     st.title("Enter ODE, Initial Conditions and Parameters")
 
-    st.write("You may use custom variable names such as x, y, z, s, i, r, u, v.")
+    st.write("You may directly use variables such as x, y, z, s, i, r, u, v in your equations.")
     st.write("You may also use parameters such as alpha, beta, gamma, epsilon, lambda, rho.")
 
-    var_names = []
     equations = []
     initials = []
     param_names = []
     param_values = []
-
-    st.subheader("Compartment Variable Names")
-
-    for i in range(st.session_state.ncomp):
-        vname = st.text_input(
-            f"Compartment Variable {i+1}",
-            placeholder="Example: x or s or i",
-            key=f"vname_{i}"
-        )
-        var_names.append(vname.strip())
 
     st.subheader("ODE Compartments")
 
@@ -279,17 +292,6 @@ elif st.session_state.page == 3:
             key=f"eq_{i}"
         )
         equations.append(eq)
-
-    st.subheader("Initial Values")
-
-    for i in range(st.session_state.ninit):
-        label_name = var_names[i] if i < len(var_names) and var_names[i] != "" else f"Variable {i+1}"
-        val = st.text_input(
-            f"Initial Value for {label_name}",
-            placeholder="Example: 10",
-            key=f"iv_{i}"
-        )
-        initials.append(val)
 
     st.subheader("Parameters")
 
@@ -316,6 +318,29 @@ elif st.session_state.page == 3:
             param_names.append(pname)
             param_values.append(pvalue)
 
+    # Detect state variables automatically from equations
+    detected_vars = infer_state_variables(equations, param_names)
+
+    st.subheader("Initial Values")
+
+    if len(detected_vars) > 0:
+        st.caption(f"Detected variables from equations: {', '.join(detected_vars)}")
+    else:
+        st.caption("Detected variables from equations: none yet")
+
+    for i in range(st.session_state.ninit):
+        if i < len(detected_vars):
+            label_name = detected_vars[i]
+        else:
+            label_name = f"Variable {i+1}"
+
+        val = st.text_input(
+            f"Initial Value for {label_name}",
+            placeholder="Example: 10",
+            key=f"iv_{i}"
+        )
+        initials.append(val)
+
     col1, col2 = st.columns(2)
 
     with col1:
@@ -326,19 +351,21 @@ elif st.session_state.page == 3:
     with col2:
         if st.button("Run", key="page3_run"):
             try:
-                for i, name in enumerate(var_names, start=1):
-                    if name == "":
-                        st.error(f"Compartment Variable {i} cannot be empty.")
-                        st.stop()
-
-                if len(set(var_names)) != len(var_names):
-                    st.error("Compartment variable names must be unique.")
-                    st.stop()
-
                 for i, eq in enumerate(equations, start=1):
                     if eq.strip() == "":
                         st.error(f"Equation {i} cannot be empty.")
                         st.stop()
+
+                # Re-detect after final user input
+                detected_vars = infer_state_variables(equations, param_names)
+
+                if len(detected_vars) != st.session_state.ncomp:
+                    st.error(
+                        f"The number of detected variables is {len(detected_vars)}, "
+                        f"but the number of compartments is {st.session_state.ncomp}. "
+                        f"Please make sure your equations use exactly {st.session_state.ncomp} state variables."
+                    )
+                    st.stop()
 
                 for i, val in enumerate(initials, start=1):
                     if val.strip() == "":
@@ -357,7 +384,7 @@ elif st.session_state.page == 3:
                         st.stop()
                     params[name.strip()] = float(value)
 
-                f = model_function(equations, params, var_names)
+                f = model_function(equations, params, detected_vars)
 
                 t1, pim = picard_solver(
                     f,
@@ -385,7 +412,7 @@ elif st.session_state.page == 3:
                     st.session_state.nstep
                 )
 
-                err_df = create_error_table(pim, mpim, rk4, var_names)
+                err_df = create_error_table(pim, mpim, rk4, detected_vars)
 
                 st.session_state.run_result = {
                     "t": t1,
@@ -394,7 +421,7 @@ elif st.session_state.page == 3:
                     "rk4": rk4,
                     "error": err_df,
                     "params": params,
-                    "var_names": var_names
+                    "var_names": detected_vars
                 }
 
                 st.session_state.page = 4
