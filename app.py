@@ -175,7 +175,7 @@ if st.session_state.page == 1:
         st.rerun()
 
 
-# =====================================
+# # =====================================
 # PAGE 2
 # =====================================
 elif st.session_state.page == 2:
@@ -183,9 +183,19 @@ elif st.session_state.page == 2:
     st.title("System Configuration")
 
     ncomp = st.number_input("Number of Compartments", 1, 20, 8)
-    # Lock initial value ikut number of compartment
+
+    # Lock initial values ikut number of compartments
     ninit = ncomp
-    st.number_input("Number of Initial Values", value=int(ninit), disabled=True)
+    st.number_input(
+        "Number of Initial Values",
+        value=int(ninit),
+        disabled=True,
+        key="locked_initial_values"
+    )
+
+    # Number of parameters
+    nparam = st.number_input("Number of Parameters", 0, 20, 6)
+
     niter = st.number_input("Number of Iterations", 1, 50, 5)
     t0 = st.number_input("Initial Time", value=0.0)
     tf = st.number_input("Final Time", value=10.0)
@@ -201,6 +211,7 @@ elif st.session_state.page == 2:
 
     st.session_state.ncomp = ncomp
     st.session_state.ninit = ninit
+    st.session_state.nparam = nparam
     st.session_state.niter = niter
     st.session_state.t0 = t0
     st.session_state.tf = tf
@@ -231,19 +242,22 @@ elif st.session_state.page == 2:
 # =====================================
 elif st.session_state.page == 3:
 
-    st.title("Enter ODE and Initial Conditions")
+    st.title("Enter ODE, Initial Conditions and Parameters")
 
-    st.write("Use x1, x2, x3 ... as variables")
+    st.write("Use x1, x2, x3 ... as compartment variables.")
+    st.write("You may also use parameters such as alpha, beta, gamma, epsilon, lambda, rho.")
 
     equations = []
     initials = []
+    param_names = []
+    param_values = []
 
     st.subheader("ODE Compartments")
 
     for i in range(st.session_state.ncomp):
         eq = st.text_input(
             f"Equation {i+1}",
-            placeholder="Example: -0.2*x1 + 0.1*x2",
+            placeholder="Example: -beta*x1 + alpha*x2",
             key=f"eq_{i}"
         )
         equations.append(eq)
@@ -258,6 +272,31 @@ elif st.session_state.page == 3:
         )
         initials.append(val)
 
+    st.subheader("Parameters")
+
+    if st.session_state.nparam == 0:
+        st.caption("No parameter input is required.")
+    else:
+        for i in range(st.session_state.nparam):
+            colp1, colp2 = st.columns(2)
+
+            with colp1:
+                pname = st.text_input(
+                    f"Parameter Name {i+1}",
+                    placeholder="Example: alpha",
+                    key=f"pname_{i}"
+                )
+
+            with colp2:
+                pvalue = st.text_input(
+                    f"Parameter Value {i+1}",
+                    placeholder="Example: 0.25",
+                    key=f"pvalue_{i}"
+                )
+
+            param_names.append(pname)
+            param_values.append(pvalue)
+
     col1, col2 = st.columns(2)
 
     with col1:
@@ -267,11 +306,33 @@ elif st.session_state.page == 3:
 
     with col2:
         if st.button("Run", key="page3_run"):
-
             try:
+                # Check equation kosong
+                for i, eq in enumerate(equations, start=1):
+                    if eq.strip() == "":
+                        st.error(f"Equation {i} cannot be empty.")
+                        st.stop()
+
+                # Check initial value kosong
+                for i, val in enumerate(initials, start=1):
+                    if val.strip() == "":
+                        st.error(f"Initial Value {i} cannot be empty.")
+                        st.stop()
+
                 y0 = [float(v) for v in initials]
 
-                f = model_function(equations)
+                # Build parameter dictionary
+                params = {}
+                for i, (name, value) in enumerate(zip(param_names, param_values), start=1):
+                    if name.strip() == "":
+                        st.error(f"Parameter Name {i} cannot be empty.")
+                        st.stop()
+                    if value.strip() == "":
+                        st.error(f"Parameter Value {i} cannot be empty.")
+                        st.stop()
+                    params[name.strip()] = float(value)
+
+                f = model_function(equations, params)
 
                 t1, pim = picard_solver(
                     f,
@@ -306,15 +367,15 @@ elif st.session_state.page == 3:
                     "pim": pim,
                     "mpim": mpim,
                     "rk4": rk4,
-                    "error": err_df
+                    "error": err_df,
+                    "params": params
                 }
 
                 st.session_state.page = 4
                 st.rerun()
 
             except Exception as e:
-                st.error(e)
-
+                st.error(f"Error: {e}")
 
 # =====================================
 # PAGE 4
