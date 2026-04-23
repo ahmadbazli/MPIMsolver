@@ -146,7 +146,7 @@ if st.session_state.page == 1:
 
     st.markdown("""
     ### Welcome
-    The Multistage Picard Iterative Method Prediction System is an advanced computational platform developed to solve and predict the behaviour of systems of Ordinary Differential Equations (ODEs). Many real-world mathematical models such as disease transmission, population growth, engineering control systems, chemical reactions, and dynamic business processes are represented using systems of ODEs. This system was created to make those models easier to analyse, simulate, and compare through modern numerical methods.
+    The Multistage Picard Iterative Method Prediction System is a specialized computational platform developed to solve and predict the behaviour of first-order systems of Ordinary Differential Equations (ODEs). Many real-world mathematical models such as disease transmission, population interaction, chemical processes, engineering systems, and dynamic forecasting problems can be expressed in the form of first-order differential equation systems. This system was created to simplify the analysis and numerical solution of such models in an efficient and user-friendly environment.
     
     This platform is especially useful for students, lecturers, researchers, engineers, scientists, and analysts who work with mathematical modelling or prediction problems. Instead of solving complex equations manually, users can input their differential equation models together with initial conditions and obtain numerical approximations quickly and efficiently.
     
