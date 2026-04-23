@@ -25,28 +25,35 @@ if "run_result" not in st.session_state:
 # FUNCTIONS
 # =====================================
 
-def eval_equation(eq, t, vals):
+def eval_equation(eq, t, vals, params, var_names):
     env = {
         "t": t,
         "np": np,
         "math": math,
         "sin": math.sin,
         "cos": math.cos,
+        "tan": math.tan,
         "exp": math.exp,
-        "sqrt": math.sqrt
+        "sqrt": math.sqrt,
+        "log": math.log
     }
 
-    for i in range(len(vals)):
-        env[f"x{i+1}"] = vals[i]
+    # Compartment variables ikut nama yang user isi
+    for name, value in zip(var_names, vals):
+        env[name] = value
+
+    # Parameters
+    for name, value in params.items():
+        env[name] = value
 
     return eval(eq, {"__builtins__": {}}, env)
 
 
-def model_function(equations):
+def model_function(equations, params, var_names):
     def f(t, y):
         result = []
         for eq in equations:
-            result.append(eval_equation(eq, t, y))
+            result.append(eval_equation(eq, t, y, params, var_names))
         return np.array(result, dtype=float)
     return f
 
@@ -119,7 +126,7 @@ def mpim_solver(f, t0, tf, y0, nstep, niter):
 # =====================================
 # ERROR TABLE
 # =====================================
-def create_error_table(pim, mpim, rk4):
+def create_error_table(pim, mpim, rk4, var_names):
     rows = []
 
     for i in range(rk4.shape[1]):
@@ -127,7 +134,7 @@ def create_error_table(pim, mpim, rk4):
         err_mpim = np.abs(mpim[:, i] - rk4[:, i])
 
         rows.append({
-            "Compartment": f"C{i+1}",
+            "Compartment": var_names[i],
             "PIM Final Error": err_pim[-1],
             "MPIM Final Error": err_mpim[-1],
             "PIM Mean Error": np.mean(err_pim),
@@ -175,7 +182,7 @@ if st.session_state.page == 1:
         st.rerun()
 
 
-# # =====================================
+# =====================================
 # PAGE 2
 # =====================================
 elif st.session_state.page == 2:
@@ -319,24 +326,20 @@ elif st.session_state.page == 3:
     with col2:
         if st.button("Run", key="page3_run"):
             try:
-                # Check variable names
                 for i, name in enumerate(var_names, start=1):
                     if name == "":
                         st.error(f"Compartment Variable {i} cannot be empty.")
                         st.stop()
 
-                # Check duplicate variable names
                 if len(set(var_names)) != len(var_names):
                     st.error("Compartment variable names must be unique.")
                     st.stop()
 
-                # Check equation kosong
                 for i, eq in enumerate(equations, start=1):
                     if eq.strip() == "":
                         st.error(f"Equation {i} cannot be empty.")
                         st.stop()
 
-                # Check initial value kosong
                 for i, val in enumerate(initials, start=1):
                     if val.strip() == "":
                         st.error(f"Initial Value {i} cannot be empty.")
@@ -344,7 +347,6 @@ elif st.session_state.page == 3:
 
                 y0 = [float(v) for v in initials]
 
-                # Build parameter dictionary
                 params = {}
                 for i, (name, value) in enumerate(zip(param_names, param_values), start=1):
                     if name.strip() == "":
@@ -383,7 +385,7 @@ elif st.session_state.page == 3:
                     st.session_state.nstep
                 )
 
-                err_df = create_error_table(pim, mpim, rk4)
+                err_df = create_error_table(pim, mpim, rk4, var_names)
 
                 st.session_state.run_result = {
                     "t": t1,
@@ -400,6 +402,8 @@ elif st.session_state.page == 3:
 
             except Exception as e:
                 st.error(f"Error: {e}")
+
+
 # =====================================
 # PAGE 4
 # =====================================
@@ -414,18 +418,18 @@ elif st.session_state.page == 4:
     mpim = result["mpim"]
     rk4 = result["rk4"]
     err = result["error"]
+    var_names = result["var_names"]
 
     comp = st.selectbox(
         "Select Compartment",
-        [f"C{i+1}" for i in range(mpim.shape[1])],
+        var_names,
         key="page4_compartment"
     )
 
-    idx = int(comp[1:]) - 1
+    idx = var_names.index(comp)
 
     fig, ax = plt.subplots(figsize=(10, 5))
 
-    # PIM = dashed red line
     ax.plot(
         t,
         pim[:, idx],
@@ -435,7 +439,6 @@ elif st.session_state.page == 4:
         label="Original Picard (PIM)"
     )
 
-    # MPIM = solid blue line
     ax.plot(
         t,
         mpim[:, idx],
@@ -445,7 +448,6 @@ elif st.session_state.page == 4:
         label="MPIM"
     )
 
-    # RK4 = bulatan O sahaja, tanpa line
     ax.plot(
         t,
         rk4[:, idx],
@@ -458,7 +460,6 @@ elif st.session_state.page == 4:
         label="RK4"
     )
 
-    # Zoom range ikut MPIM dan RK4 supaya lekuk nampak jelas
     y_focus = np.concatenate([mpim[:, idx], rk4[:, idx]])
     y_min = np.min(y_focus)
     y_max = np.max(y_focus)
