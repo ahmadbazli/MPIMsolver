@@ -199,6 +199,18 @@ if st.session_state.page == 1:
     - Fourth Order Runge-Kutta Method – a well-known benchmark numerical solver widely used in science and engineering.
 
     The main purpose of this system is to help users solve, simulate, predict, and compare ODE models over time. It allows users to observe solution behaviour, evaluate accuracy between methods, and generate graphical outputs for analysis and research purposes.
+
+    This system is suitable for applications in:
+
+    - Epidemic and disease modelling
+    - Population dynamics
+    - Physics and engineering systems
+    - Finance and economic forecasting
+    - Biological and environmental models
+    - Academic learning and mathematical research
+    
+    Click Start to begin exploring your ODE prediction model using powerful iterative numerical methods.
+
     """)
 
     if st.button("Start", key="start_btn"):
