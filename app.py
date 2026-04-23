@@ -183,7 +183,9 @@ elif st.session_state.page == 2:
     st.title("System Configuration")
 
     ncomp = st.number_input("Number of Compartments", 1, 20, 8)
-    ninit = st.number_input("Number of Initial Values", 1, 20, 8)
+    # Lock initial value ikut number of compartment
+    ninit = ncomp
+    st.number_input("Number of Initial Values", value=int(ninit), disabled=True)
     niter = st.number_input("Number of Iterations", 1, 50, 5)
     t0 = st.number_input("Initial Time", value=0.0)
     tf = st.number_input("Final Time", value=10.0)
