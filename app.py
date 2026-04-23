@@ -244,20 +244,31 @@ elif st.session_state.page == 3:
 
     st.title("Enter ODE, Initial Conditions and Parameters")
 
-    st.write("Use x1, x2, x3 ... as compartment variables.")
+    st.write("You may use custom variable names such as x, y, z, s, i, r, u, v.")
     st.write("You may also use parameters such as alpha, beta, gamma, epsilon, lambda, rho.")
 
+    var_names = []
     equations = []
     initials = []
     param_names = []
     param_values = []
+
+    st.subheader("Compartment Variable Names")
+
+    for i in range(st.session_state.ncomp):
+        vname = st.text_input(
+            f"Compartment Variable {i+1}",
+            placeholder="Example: x or s or i",
+            key=f"vname_{i}"
+        )
+        var_names.append(vname.strip())
 
     st.subheader("ODE Compartments")
 
     for i in range(st.session_state.ncomp):
         eq = st.text_input(
             f"Equation {i+1}",
-            placeholder="Example: -beta*x1 + alpha*x2",
+            placeholder="Example: -beta*s*i or -alpha*x + beta*y",
             key=f"eq_{i}"
         )
         equations.append(eq)
@@ -265,8 +276,9 @@ elif st.session_state.page == 3:
     st.subheader("Initial Values")
 
     for i in range(st.session_state.ninit):
+        label_name = var_names[i] if i < len(var_names) and var_names[i] != "" else f"Variable {i+1}"
         val = st.text_input(
-            f"Initial Value {i+1}",
+            f"Initial Value for {label_name}",
             placeholder="Example: 10",
             key=f"iv_{i}"
         )
@@ -307,6 +319,17 @@ elif st.session_state.page == 3:
     with col2:
         if st.button("Run", key="page3_run"):
             try:
+                # Check variable names
+                for i, name in enumerate(var_names, start=1):
+                    if name == "":
+                        st.error(f"Compartment Variable {i} cannot be empty.")
+                        st.stop()
+
+                # Check duplicate variable names
+                if len(set(var_names)) != len(var_names):
+                    st.error("Compartment variable names must be unique.")
+                    st.stop()
+
                 # Check equation kosong
                 for i, eq in enumerate(equations, start=1):
                     if eq.strip() == "":
@@ -332,7 +355,7 @@ elif st.session_state.page == 3:
                         st.stop()
                     params[name.strip()] = float(value)
 
-                f = model_function(equations, params)
+                f = model_function(equations, params, var_names)
 
                 t1, pim = picard_solver(
                     f,
@@ -368,7 +391,8 @@ elif st.session_state.page == 3:
                     "mpim": mpim,
                     "rk4": rk4,
                     "error": err_df,
-                    "params": params
+                    "params": params,
+                    "var_names": var_names
                 }
 
                 st.session_state.page = 4
@@ -376,7 +400,6 @@ elif st.session_state.page == 3:
 
             except Exception as e:
                 st.error(f"Error: {e}")
-
 # =====================================
 # PAGE 4
 # =====================================
