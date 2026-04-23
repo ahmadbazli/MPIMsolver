@@ -146,14 +146,27 @@ if st.session_state.page == 1:
 
     st.markdown("""
     ### Welcome
+    The Multistage Picard Iterative Method Prediction System is an advanced computational platform developed to solve and predict the behaviour of systems of Ordinary Differential Equations (ODEs). Many real-world mathematical models such as disease transmission, population growth, engineering control systems, chemical reactions, and dynamic business processes are represented using systems of ODEs. This system was created to make those models easier to analyse, simulate, and compare through modern numerical methods.
+    This platform is especially useful for students, lecturers, researchers, engineers, scientists, and analysts who work with mathematical modelling or forecasting problems. Instead of solving complex equations manually, users can input their differential equation models together with initial conditions and obtain numerical approximations quickly and efficiently.
+    
+    This system compares three important numerical approaches:
 
-    This system compares:
+    - Original Picard Iterative Method – a classical iterative technique for approximate solutions.
+    - Multistage Picard Iterative Method – an improved version designed for better long-term stability and higher prediction accuracy.
+    - Fourth Order Runge-Kutta Method – a well-known benchmark numerical solver widely used in science and engineering.
 
-    - Original Picard Iterative Method  
-    - Multistage Picard Iterative Method  
-    - Fourth Order Runge-Kutta Method  
+    The main purpose of this system is to help users solve, simulate, predict, and compare ODE models over time. It allows users to observe solution behaviour, evaluate accuracy between methods, and generate graphical outputs for analysis and research purposes.
 
-    Used for solving and prediction of ODE models.
+    This system is suitable for applications in:
+
+    -Epidemic and disease modelling
+    -Population dynamics
+    -Physics and engineering systems
+    -Finance and economic forecasting
+    -Biological and environmental models
+    -Academic learning and mathematical research
+    
+    Click Start to begin exploring your ODE prediction model using powerful iterative numerical methods.
     """)
 
     if st.button("Start", key="start_btn"):
